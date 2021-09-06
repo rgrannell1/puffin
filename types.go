@@ -51,5 +51,14 @@ type PidSocket struct {
 	Time       time.Time
 }
 
+type PacketData struct {
+	Device    string
+	LocalAddr net.IP
+	LocalPort uint64
+	RemAddr   net.IP
+	RemPort   uint64
+	Size      int
+}
+
 type ProcessInfo struct {
 }

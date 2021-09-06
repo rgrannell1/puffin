@@ -123,19 +123,46 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
 	return pidSockets
 }
 
+func ListNetworkDevices(pfs *procfs.FS) ([]string, error) {
+	devs, error := pfs.NetDev()
+
+	if error != nil {
+		return nil, error
+	}
+
+	idx := 0
+	deviceNames := make([]string, len(devs))
+	for name := range devs {
+		deviceNames[idx] = name
+		idx++
+	}
+
+	return deviceNames, nil
+}
+
+func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
+	deviceNames, _ := ListNetworkDevices(pfs)
+
+	for _, device := range deviceNames {
+		go EmitDevicePackets(device)
+	}
+}
+
 func AssociatePackets(pfs *procfs.FS, pidConns *[]PidSocket) {
-	// now, the hard part! associate packets onto sockets!
+
 }
 
 func NetworkProcessWatcher(pfs *procfs.FS) {
 	tcpChan := make(chan []TCPConnection)
+	packetChan := make(chan PacketData)
 
 	go NetTCPWatcher(tcpChan, pfs)
+	go PacketWatcher(packetChan, pfs)
 
 	for {
 		conns := <-tcpChan
 		pidConns := AssociateProcesses(pfs, conns)
-		packets := AssociatePackets(pfs, pidConns)
+		AssociatePackets(pfs, &pidConns)
 	}
 }
 
