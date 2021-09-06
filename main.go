@@ -32,7 +32,7 @@ func GetInode(fpath *string) uint64 {
 const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
 
 func LookupUsername(id uint64) (string, error) {
-	userData, err := user.LookupId(string(id))
+	userData, err := user.LookupId(fmt.Sprint(id))
 
 	if err != nil {
 		return "", err
@@ -41,6 +41,7 @@ func LookupUsername(id uint64) (string, error) {
 	return userData.Username, nil
 }
 
+// List pids by reading /proc/<id> folders
 func ListPids(pfs *procfs.FS) (map[uint64][]int, error) {
 	info, _ := ioutil.ReadDir("/proc/")
 	pidsForInode := make(map[uint64][]int)
@@ -62,7 +63,7 @@ func ListPids(pfs *procfs.FS) (map[uint64][]int, error) {
 					if pids, ok := pidsForInode[inode]; ok {
 						pidsForInode[inode] = append(pids, pid)
 					} else {
-						pidsForInode[inode] = []int{pid} // lookup pids too!
+						pidsForInode[inode] = []int{pid}
 					}
 				}
 			}
@@ -72,11 +73,27 @@ func ListPids(pfs *procfs.FS) (map[uint64][]int, error) {
 	return pidsForInode, nil
 }
 
-func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
-	// list process fd
+func PidToCommand(pfs *procfs.FS, pid int) string {
+	pidFs, err := pfs.Proc(pid)
 
+	if err != nil {
+		return "?"
+	}
+
+	comm, err := pidFs.Comm()
+
+	if err != nil {
+		return "?"
+	}
+
+	return comm
+}
+
+func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
+	// get all pids from /proc/
 	pidsForInode, _ := ListPids(pfs)
 
+	//pidToProcessInfo := make(map[uint64]ProcessInfo)
 	pidSockets := make([]PidSocket, 0)
 	uidToUsername := make(map[uint64]string)
 
@@ -98,12 +115,16 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
 					}
 				}
 
-				pidSockets = append(pidSockets, PidSocket{uidToUsername[conn.UID], pid, conn, dt})
+				pidSockets = append(pidSockets, PidSocket{uidToUsername[conn.UID], PidToCommand(pfs, pid), pid, conn, dt})
 			}
 		}
 	}
 
 	return pidSockets
+}
+
+func AssociatePackets(pfs *procfs.FS, pidConns *[]PidSocket) {
+	// now, the hard part! associate packets onto sockets!
 }
 
 func NetworkProcessWatcher(pfs *procfs.FS) {
@@ -114,10 +135,7 @@ func NetworkProcessWatcher(pfs *procfs.FS) {
 	for {
 		conns := <-tcpChan
 		pidConns := AssociateProcesses(pfs, conns)
-
-		for _, conn := range pidConns {
-			fmt.Println(conn.String())
-		}
+		packets := AssociatePackets(pfs, pidConns)
 	}
 }
 

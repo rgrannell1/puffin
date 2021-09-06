@@ -36,7 +36,8 @@ func ProcHash(v6 bool) (string, error) {
 	return string(currHash.Sum(nil)), err
 }
 
-// Watch /proc/net/tcp and /proc/net/tcp6 for changes
+// Watch /proc/net/tcp and /proc/net/tcp6 for changes by emitting a file-change
+// periodically
 func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
 	hashv4 := ""
 	hashv6 := ""
