@@ -13,10 +13,6 @@ import (
 	"github.com/prometheus/procfs"
 )
 
-type SysStat struct {
-	Ino int
-}
-
 func GetInode(fpath *string) uint64 {
 	// it's really odd I need a direct syscall to get an inode...
 	// this will fail horribly on windows
@@ -89,7 +85,7 @@ func PidToCommand(pfs *procfs.FS, pid int) string {
 	return comm
 }
 
-func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
+func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 	// get all pids from /proc/
 	pidsForInode, _ := ListPids(pfs)
 
@@ -120,56 +116,11 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) []PidSocket {
 		}
 	}
 
-	return pidSockets
+	return &pidSockets
 }
 
-func ListNetworkDevices(pfs *procfs.FS) ([]string, error) {
-	devs, error := pfs.NetDev()
-
-	if error != nil {
-		return nil, error
-	}
-
-	idx := 0
-	deviceNames := make([]string, len(devs))
-	for name := range devs {
-		deviceNames[idx] = name
-		idx++
-	}
-
-	return deviceNames, nil
-}
-
-func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
-	deviceNames, _ := ListNetworkDevices(pfs)
-
-	for _, device := range deviceNames {
-		go EmitDevicePackets(packetChan, device)
-	}
-}
-
-func AssociatePackets(pfs *procfs.FS, pidConns *[]PidSocket) {
-
-}
-
-func NetworkProcessWatcher(pfs *procfs.FS) {
-	tcpChan := make(chan []TCPConnection)
-	packetChan := make(chan PacketData)
-
-	go NetTCPWatcher(tcpChan, pfs)
-	go PacketWatcher(packetChan, pfs)
-
-	var pidConns []PidSocket
-
-	for {
-		select {
-		case conns := <-tcpChan:
-			pidConns = AssociateProcesses(pfs, conns)
-		case pkt := <-packetChan:
-			AssociatePackets(pfs, &pidConns) // TODO race
-			fmt.Println(pkt)
-		}
-	}
+func ReportNetwork(store PacketStore, pidConn *[]PidSocket) {
+	ShowPacketStore(store)
 }
 
 // Main application
@@ -180,8 +131,22 @@ func Porcus() int {
 		return 1
 	}
 
-	go NetworkProcessWatcher(&pfs)
+	storeChan := make(chan PacketStore)
+	pidConnChan := make(chan *[]PidSocket)
+
+	var stateStore PacketStore
+	var statePidConnChan *[]PidSocket
+
+	go NetworkWatcher(&pfs, storeChan, pidConnChan)
 	for {
+		select {
+		case pktStore := <-storeChan:
+			stateStore = pktStore
+		case pidConns := <-pidConnChan:
+			statePidConnChan = pidConns
+		}
+
+		ReportNetwork(stateStore, statePidConnChan)
 	}
 
 	return 0

@@ -38,8 +38,8 @@ type TCPConnection struct {
 
 // base the socket-id on the 4-tuple (localip, localport, remip, remport)
 // lets assume IPs will always have the same representation for now
-func SocketId(conn *TCPConnection) string {
-	return conn.LocalAddr.String() + string(conn.LocalPort) + conn.RemAddr.String() + string(conn.RemPort) + "tcp"
+func (conn *TCPConnection) Id() string {
+	return conn.LocalAddr.String() + fmt.Sprint(conn.LocalPort) + conn.RemAddr.String() + fmt.Sprint(conn.RemPort)
 }
 
 func (pidSocket *PidSocket) String() string {
@@ -58,6 +58,7 @@ type PidSocket struct {
 
 type PacketData struct {
 	Device    string
+	Timestamp int64
 	LocalAddr net.IP
 	LocalPort uint64
 	RemAddr   net.IP
@@ -65,5 +66,29 @@ type PacketData struct {
 	Size      int
 }
 
-type ProcessInfo struct {
+type PacketStore = map[string]map[string][]StoredPacketData
+
+func ShowPacketStore(store PacketStore) {
+	for device, byConn := range store {
+		fmt.Println(device + ": (device)")
+		for id, stored := range byConn {
+			fmt.Println("   " + id + ":(id)")
+			for _, elem := range stored {
+				fmt.Println(elem)
+			}
+		}
+	}
+}
+
+type StoredPacketData struct {
+	Timestampt int64
+	Size       int
+}
+
+type Identifiable interface {
+	Id() string
+}
+
+func (pkt *PacketData) Id() string {
+	return string(pkt.LocalAddr) + fmt.Sprint(pkt.LocalPort) + string(pkt.RemAddr) + fmt.Sprint(pkt.RemPort)
 }
