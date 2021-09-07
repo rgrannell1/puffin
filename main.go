@@ -144,7 +144,7 @@ func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
 	deviceNames, _ := ListNetworkDevices(pfs)
 
 	for _, device := range deviceNames {
-		go EmitDevicePackets(device)
+		go EmitDevicePackets(packetChan, device)
 	}
 }
 
@@ -159,10 +159,16 @@ func NetworkProcessWatcher(pfs *procfs.FS) {
 	go NetTCPWatcher(tcpChan, pfs)
 	go PacketWatcher(packetChan, pfs)
 
+	var pidConns []PidSocket
+
 	for {
-		conns := <-tcpChan
-		pidConns := AssociateProcesses(pfs, conns)
-		AssociatePackets(pfs, &pidConns)
+		select {
+		case conns := <-tcpChan:
+			pidConns = AssociateProcesses(pfs, conns)
+		case pkt := <-packetChan:
+			AssociatePackets(pfs, &pidConns) // TODO race
+			fmt.Println(pkt)
+		}
 	}
 }
 

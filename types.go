@@ -24,7 +24,6 @@ func (conn *TCPConnection) String() string {
 }
 
 type TCPConnection struct {
-	Id        uint
 	SL        uint64
 	LocalAddr net.IP
 	LocalPort uint64
@@ -35,6 +34,12 @@ type TCPConnection struct {
 	RxQueue   uint64
 	UID       uint64
 	Inode     uint64
+}
+
+// base the socket-id on the 4-tuple (localip, localport, remip, remport)
+// lets assume IPs will always have the same representation for now
+func SocketId(conn *TCPConnection) string {
+	return conn.LocalAddr.String() + string(conn.LocalPort) + conn.RemAddr.String() + string(conn.RemPort) + "tcp"
 }
 
 func (pidSocket *PidSocket) String() string {

@@ -12,7 +12,6 @@ import (
 
 func ProcHash(v6 bool) (string, error) {
 	// -- I don't know a better method than read twice, once for content, once for a hash
-
 	var fpath string
 	if v6 {
 		fpath = "/proc/net/tcp6"
@@ -56,7 +55,8 @@ func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
 			mconns = make([]TCPConnection, len(conns))
 
 			for idx, conn := range conns {
-				mconns[idx] = TCPConnection{0, conn.Sl, conn.LocalAddr, conn.LocalPort, conn.RemAddr, conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode}
+				tcpConn := TCPConnection{conn.Sl, conn.LocalAddr, conn.LocalPort, conn.RemAddr, conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode}
+				mconns[idx] = tcpConn
 			}
 		}
 
@@ -70,7 +70,8 @@ func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
 			conns, _ := pfs.NetTCP6()
 
 			for _, conn := range conns {
-				mconns = append(mconns, TCPConnection{0, conn.Sl, conn.LocalAddr, conn.LocalPort, conn.RemAddr, conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode})
+				tcpConn := TCPConnection{conn.Sl, conn.LocalAddr, conn.LocalPort, conn.RemAddr, conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode}
+				mconns = append(mconns, tcpConn)
 			}
 		}
 
