@@ -2,6 +2,7 @@ package main
 
 import "github.com/prometheus/procfs"
 
+// List network devices from /proc/net/dev
 func ListNetworkDevices(pfs *procfs.FS) ([]string, error) {
 	devs, error := pfs.NetDev()
 

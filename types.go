@@ -3,26 +3,10 @@ package main
 import (
 	"fmt"
 	"net"
-	"os/user"
-	"strings"
 	"time"
 )
 
-func (conn *TCPConnection) String() string {
-	message := []string{
-		"",
-		conn.LocalAddr.String(),
-		":",
-		fmt.Sprint(conn.LocalPort),
-		" -> ",
-		conn.RemAddr.String(),
-		":",
-		fmt.Sprint(conn.RemPort),
-	}
-
-	return strings.Join(message, "")
-}
-
+// Represents a TCP Connection, based on Procfs's export
 type TCPConnection struct {
 	SL        uint64
 	LocalAddr net.IP
@@ -42,12 +26,8 @@ func (conn *TCPConnection) Id() string {
 	return conn.LocalAddr.String() + fmt.Sprint(conn.LocalPort) + conn.RemAddr.String() + fmt.Sprint(conn.RemPort)
 }
 
-func (pidSocket *PidSocket) String() string {
-	owner, _ := user.LookupId(fmt.Sprint(pidSocket.Connection.UID))
-
-	return owner.Username + " " + fmt.Sprint(pidSocket.Pid) + " " + pidSocket.Command + " " + pidSocket.Connection.String()
-}
-
+// Represents an association between process-based information (user, command, pid), and a
+// transport-layer connection
 type PidSocket struct {
 	UserName   string
 	Command    string
@@ -56,6 +36,8 @@ type PidSocket struct {
 	Time       time.Time
 }
 
+// Information to extract from each packet, where possible.
+// If port information is unavailable, return IP-layer information only.
 type PacketData struct {
 	Device    string
 	Timestamp int64
@@ -66,29 +48,17 @@ type PacketData struct {
 	Size      int
 }
 
+// Store packets by <device>.<connid> as an array of some packet-data
 type PacketStore = map[string]map[string][]StoredPacketData
 
-func ShowPacketStore(store PacketStore) {
-	for device, byConn := range store {
-		fmt.Println(device + ": (device)")
-		for id, stored := range byConn {
-			fmt.Println("   " + id + ":(id)")
-			for _, elem := range stored {
-				fmt.Println(elem)
-			}
-		}
-	}
-}
-
+// Only store packet timestamps and size, the reset of the information can be
+// recovered from storage context
 type StoredPacketData struct {
 	Timestampt int64
 	Size       int
 }
 
-type Identifiable interface {
-	Id() string
-}
-
+// Given extracted packet-information, return a connection ID
 func (pkt *PacketData) Id() string {
 	return string(pkt.LocalAddr) + fmt.Sprint(pkt.LocalPort) + string(pkt.RemAddr) + fmt.Sprint(pkt.RemPort)
 }

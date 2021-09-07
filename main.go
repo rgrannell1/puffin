@@ -119,10 +119,6 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 	return &pidSockets
 }
 
-func ReportNetwork(store PacketStore, pidConn *[]PidSocket) {
-	ShowPacketStore(store)
-}
-
 // Main application
 func Porcus() int {
 	pfs, err := procfs.NewDefaultFS()
@@ -146,17 +142,23 @@ func Porcus() int {
 			statePidConnChan = pidConns
 		}
 
+		AssociatePackets(&pfs, statePidConnChan, statePidConnChan)
 		ReportNetwork(stateStore, statePidConnChan)
 	}
-
-	return 0
 }
 
 func main() {
 	usage := `
 Usage:
-  porcus
+  porcus [-i|--interactive]A
+  porcus [-j|--json]
 	porcus [-h|--help]
+
+Description:
+  Monitor machine network-trafficz
+
+Options:
+  -j, --json    output as JSON
 	`
 	docopt.ParseDoc(usage)
 	Porcus()
