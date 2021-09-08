@@ -121,7 +121,9 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 }
 
 // Main application
-func Porcus() int {
+func Porcus(json bool, seconds int) int {
+	start := time.Now()
+
 	pfs, err := procfs.NewDefaultFS()
 	if err != nil {
 		log.Fatal(err)
@@ -140,17 +142,6 @@ func Porcus() int {
 
 	store := map[string]map[string]StoredConnectionData{}
 
-	// report
-	go func() {
-		for {
-			time.Sleep(time.Second * 30)
-
-			storeLock.Lock()
-			ReportNetwork(&pidConns, store)
-			storeLock.Unlock()
-		}
-	}()
-
 	for {
 		select {
 		case tmp := <-pidConnChan:
@@ -165,8 +156,15 @@ func Porcus() int {
 			packets = append(packets, *pkt)
 
 			storeLock.Lock()
-			AssociatePacket(store, &pidConns, pkt)
+			AssociatePacket(store, &pidConns, *pkt)
 			storeLock.Unlock()
+		}
+
+		if json && time.Since(start) > time.Second*time.Duration(seconds) {
+			storeLock.Lock()
+			ReportNetwork(&pidConns, store)
+			storeLock.Unlock()
+			return 0
 		}
 	}
 }
@@ -174,16 +172,21 @@ func Porcus() int {
 func main() {
 	usage := `
 Usage:
-  porcus [-i|--interactive]
-  porcus [-j|--json]
+  porcus [-j|--json] [-s <seconds|--seconds <seconds>]
 	porcus [-h|--help]
 
 Description:
   Monitor machine network-traffic.
 
 Options:
-  -j, --json    output as JSON.
+  -j, --json                           output as JSON.
+	-s <seconds>, --seconds <seconds>    how mnay seconds should it run for?
 	`
-	docopt.ParseDoc(usage)
-	Porcus()
+
+	opts, _ := docopt.ParseDoc(usage)
+	json, _ := opts.Bool("--json")
+
+	seconds, _ := opts.Int("--seconds")
+
+	Porcus(json, seconds)
 }

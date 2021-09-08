@@ -63,15 +63,15 @@ func PacketWatcher(packetChan chan *PacketData, pfs *procfs.FS) {
 	}
 }
 
-func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt *PacketData) {
+func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt PacketData) {
 	// if the device is not set, set it!
 	if _, ok := store[pkt.Device]; !ok {
 		store[pkt.Device] = map[string]StoredConnectionData{}
 	}
 
 	id := pkt.Id()
-	if tgt, ok := store[pkt.Device][id]; !ok {
-		// set the initial stored-data for this connection
+	if tgt, hasConn := store[pkt.Device][id]; !hasConn {
+		// set the initial stored-data for this connection, with a single stored packet
 		packets := []StoredPacketData{}
 		packets = append(packets, StoredPacketData{
 			Timestamp: int64(pkt.Timestamp),
@@ -92,7 +92,7 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt *Pa
 			tgt.From = int(pkt.Timestamp)
 		}
 
-		if tgt.To > int(pkt.Timestamp) {
+		if tgt.To < int(pkt.Timestamp) {
 			tgt.To = int(pkt.Timestamp)
 		}
 
@@ -101,5 +101,4 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt *Pa
 			pkt.Size,
 		})
 	}
-
 }
