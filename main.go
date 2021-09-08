@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/user"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -127,32 +128,53 @@ func Porcus() int {
 		return 1
 	}
 
-	storeChan := make(chan PacketStore)
 	pidConnChan := make(chan *[]PidSocket)
+	packetChan := make(chan *PacketData)
 
-	var pktStore PacketStore
-	var pidConns *[]PidSocket
+	pidConns := []PidSocket{}
+	packets := []PacketData{}
 
-	machineNetStore := MachineNetworkStorage{}
+	go NetworkWatcher(&pfs, packetChan, pidConnChan)
 
-	go NetworkWatcher(&pfs, storeChan, pidConnChan)
+	var storeLock sync.Mutex
+
+	store := map[string]map[string]StoredConnectionData{}
+
+	// report
+	go func() {
+		for {
+			time.Sleep(time.Second * 30)
+
+			storeLock.Lock()
+			ReportNetwork(&pidConns, store)
+			storeLock.Unlock()
+		}
+	}()
 
 	for {
 		select {
-		case pktStore = <-storeChan:
-		case pidConns = <-pidConnChan:
+		case tmp := <-pidConnChan:
+			// full is returned each time, append
+
+			storeLock.Lock()
+			pidConns = []PidSocket{}
+			pidConns = append(pidConns, *tmp...)
+			storeLock.Unlock()
+
+		case pkt := <-packetChan:
+			packets = append(packets, *pkt)
+
+			storeLock.Lock()
+			AssociatePacket(store, &pidConns, pkt)
+			storeLock.Unlock()
 		}
-
-		AssociatePackets(&pfs, machineNetStore, pktStore, pidConns)
-
-		ReportNetwork(pidConns, machineNetStore)
 	}
 }
 
 func main() {
 	usage := `
 Usage:
-  porcus [-i|--interactive]A
+  porcus [-i|--interactive]
   porcus [-j|--json]
 	porcus [-h|--help]
 

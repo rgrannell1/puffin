@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -10,7 +8,7 @@ import (
 )
 
 // Extract connection-information and size from each packet
-func ExtractPacketData(device string, pkt gopacket.Packet) PacketData {
+func ExtractPacketData(device string, pkt gopacket.Packet) *PacketData {
 	pckData := PacketData{}
 	pckData.Device = device
 	pckData.Timestamp = pkt.Metadata().Timestamp.UnixNano()
@@ -36,11 +34,11 @@ func ExtractPacketData(device string, pkt gopacket.Packet) PacketData {
 	// TODO UDP or other layer
 	pckData.Size = len(pkt.Data())
 
-	return pckData
+	return &pckData
 }
 
 // Emit packet-information for each device to a shared channel.
-func EmitDevicePackets(packetChan chan PacketData, device string) {
+func EmitDevicePackets(packetChan chan *PacketData, device string) {
 	handle, err := pcap.OpenLive(device, 262144, true, pcap.BlockForever)
 
 	if err != nil {
@@ -56,28 +54,8 @@ func EmitDevicePackets(packetChan chan PacketData, device string) {
 	}
 }
 
-// Store packet information into a <device>.<conn-id> to packet-data array map
-func StorePacket(store PacketStore, pkt *PacketData) PacketStore {
-	id := pkt.Id()
-
-	stored := StoredPacketData{
-		pkt.Timestamp,
-		pkt.Size,
-	}
-
-	// TODO for the moment, append and store. This is _horribly_ inefficient
-	if _, ok := store[pkt.Device]; ok {
-		store[pkt.Device][id] = append(store[pkt.Device][id], stored)
-	} else {
-		store[pkt.Device] = map[string][]StoredPacketData{}
-		store[pkt.Device][id] = append(store[pkt.Device][id], stored)
-	}
-
-	return store
-}
-
 // Watch for packets on each present device
-func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
+func PacketWatcher(packetChan chan *PacketData, pfs *procfs.FS) {
 	deviceNames, _ := ListNetworkDevices(pfs)
 
 	for _, device := range deviceNames {
@@ -85,36 +63,43 @@ func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
 	}
 }
 
-func AssociatePackets(pfs *procfs.FS, machineNetStore MachineNetworkStorage, packetStore PacketStore, pidConns *[]PidSocket) {
-	for device, connPackets := range packetStore {
-		for connId, packets := range connPackets {
-			if _, ok := machineNetStore[device]; !ok {
-				machineNetStore[device] = map[string]StoredConnectionData{}
-			}
+func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt *PacketData) {
+	// if the device is not set, set it!
+	if _, ok := store[pkt.Device]; !ok {
+		store[pkt.Device] = map[string]StoredConnectionData{}
+	}
 
-			size := 0
-			first := int(math.Inf(0))
-			last := 0
+	id := pkt.Id()
+	if tgt, ok := store[pkt.Device][id]; !ok {
+		// set the initial stored-data for this connection
+		packets := []StoredPacketData{}
+		packets = append(packets, StoredPacketData{
+			Timestamp: int64(pkt.Timestamp),
+			Size:      int(pkt.Size),
+		})
 
-			for _, pkt := range packets {
-				size += pkt.Size
-
-				if int(pkt.Timestamp) < first {
-					first = int(pkt.Timestamp)
-				}
-
-				if int(pkt.Timestamp) > last {
-					last = int(pkt.Timestamp)
-				}
-			}
-
-			machineNetStore[device][connId] = StoredConnectionData{
-				Size:    size,
-				From:    first,
-				To:      last,
-				Packets: packets,
-			}
+		store[pkt.Device][id] = StoredConnectionData{
+			Size:    pkt.Size,
+			From:    int(pkt.Timestamp),
+			To:      int(pkt.Timestamp),
+			Packets: packets,
 		}
+	} else {
+		// update the connection
+		tgt.Size += pkt.Size
+
+		if tgt.From > int(pkt.Timestamp) {
+			tgt.From = int(pkt.Timestamp)
+		}
+
+		if tgt.To > int(pkt.Timestamp) {
+			tgt.To = int(pkt.Timestamp)
+		}
+
+		tgt.Packets = append(tgt.Packets, StoredPacketData{
+			pkt.Timestamp,
+			pkt.Size,
+		})
 	}
 
 }
