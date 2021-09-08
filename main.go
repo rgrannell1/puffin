@@ -130,20 +130,22 @@ func Porcus() int {
 	storeChan := make(chan PacketStore)
 	pidConnChan := make(chan *[]PidSocket)
 
-	var stateStore PacketStore
-	var statePidConnChan *[]PidSocket
+	var pktStore PacketStore
+	var pidConns *[]PidSocket
+
+	machineNetStore := MachineNetworkStorage{}
 
 	go NetworkWatcher(&pfs, storeChan, pidConnChan)
+
 	for {
 		select {
-		case pktStore := <-storeChan:
-			stateStore = pktStore
-		case pidConns := <-pidConnChan:
-			statePidConnChan = pidConns
+		case pktStore = <-storeChan:
+		case pidConns = <-pidConnChan:
 		}
 
-		AssociatePackets(&pfs, statePidConnChan, statePidConnChan)
-		ReportNetwork(stateStore, statePidConnChan)
+		AssociatePackets(&pfs, machineNetStore, pktStore, pidConns)
+
+		ReportNetwork(pidConns, machineNetStore)
 	}
 }
 
@@ -155,10 +157,10 @@ Usage:
 	porcus [-h|--help]
 
 Description:
-  Monitor machine network-trafficz
+  Monitor machine network-traffic.
 
 Options:
-  -j, --json    output as JSON
+  -j, --json    output as JSON.
 	`
 	docopt.ParseDoc(usage)
 	Porcus()

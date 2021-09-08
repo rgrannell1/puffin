@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -83,6 +85,36 @@ func PacketWatcher(packetChan chan PacketData, pfs *procfs.FS) {
 	}
 }
 
-func AssociatePackets(pfs *procfs.FS, pidConns *[]PidSocket, statePidConnChan *[]PidSocket) {
+func AssociatePackets(pfs *procfs.FS, machineNetStore MachineNetworkStorage, packetStore PacketStore, pidConns *[]PidSocket) {
+	for device, connPackets := range packetStore {
+		for connId, packets := range connPackets {
+			if _, ok := machineNetStore[device]; !ok {
+				machineNetStore[device] = map[string]StoredConnectionData{}
+			}
+
+			size := 0
+			first := int(math.Inf(0))
+			last := 0
+
+			for _, pkt := range packets {
+				size += pkt.Size
+
+				if int(pkt.Timestamp) < first {
+					first = int(pkt.Timestamp)
+				}
+
+				if int(pkt.Timestamp) > last {
+					last = int(pkt.Timestamp)
+				}
+			}
+
+			machineNetStore[device][connId] = StoredConnectionData{
+				Size:    size,
+				From:    first,
+				To:      last,
+				Packets: packets,
+			}
+		}
+	}
 
 }
