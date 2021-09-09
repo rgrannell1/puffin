@@ -121,7 +121,7 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 }
 
 // Main application
-func Porcus(json bool, seconds int) int {
+func Puffin(json bool, seconds int) int {
 	start := time.Now()
 
 	pfs, err := procfs.NewDefaultFS()
@@ -172,8 +172,8 @@ func Porcus(json bool, seconds int) int {
 func main() {
 	usage := `
 Usage:
-  porcus [-j|--json] [-s <seconds|--seconds <seconds>]
-	porcus [-h|--help]
+  puffin [-j|--json] [-s <seconds|--seconds <seconds>]
+	puffin [-h|--help]
 
 Description:
   Monitor machine network-traffic.
@@ -188,5 +188,5 @@ Options:
 
 	seconds, _ := opts.Int("--seconds")
 
-	Porcus(json, seconds)
+	Puffin(json, seconds)
 }
