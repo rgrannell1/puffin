@@ -32,6 +32,7 @@ type PidSocket struct {
 	UserName   string        `json:"username"`
 	Command    string        `json:"command"`
 	Pid        int           `json:"pid"`
+	PidParents []int         `json:"parent_pids"`
 	Connection TCPConnection `json:"connection"`
 	Time       time.Time     `json:"time"`
 }

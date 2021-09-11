@@ -8,11 +8,11 @@
       "name": "Debug Porcus",
       "type": "go",
       "request": "launch",
-      "mode": "auto",
+      "mode": "debug",
       "program": "${workspaceFolder}/",
+      "debugServer": 54321,
       "args": [
-      ],
-      "sudo": true
+      ]
     }
   ]
 }

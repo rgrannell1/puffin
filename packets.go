@@ -100,5 +100,13 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt Pac
 			pkt.Timestamp,
 			pkt.Size,
 		})
+
+		// for some reason I need to create a new struct?
+		store[pkt.Device][id] = StoredConnectionData{
+			tgt.Size,
+			tgt.From,
+			tgt.To,
+			tgt.Packets,
+		}
 	}
 }
