@@ -79,10 +79,14 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt Pac
 		})
 
 		store[pkt.Device][id] = StoredConnectionData{
-			Size:    pkt.Size,
-			From:    int(pkt.Timestamp),
-			To:      int(pkt.Timestamp),
-			Packets: packets,
+			LocalAddr: pkt.LocalAddr,
+			LocalPort: pkt.LocalPort,
+			RemAddr:   pkt.RemAddr,
+			RemPort:   pkt.RemPort,
+			Size:      pkt.Size,
+			From:      int(pkt.Timestamp),
+			To:        int(pkt.Timestamp),
+			Packets:   packets,
 		}
 	} else {
 		// update the connection
@@ -103,6 +107,10 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt Pac
 
 		// for some reason I need to create a new struct?
 		store[pkt.Device][id] = StoredConnectionData{
+			tgt.LocalAddr,
+			tgt.LocalPort,
+			tgt.RemAddr,
+			tgt.RemPort,
 			tgt.Size,
 			tgt.From,
 			tgt.To,

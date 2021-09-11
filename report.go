@@ -66,6 +66,27 @@ const CREATE_PID_PARENTS_TABLE = `create table if not exists parent_pid (
 	level  int
 )`
 
+const CREATE_CONN_SUMMARY_TABLE = `create table if not exists conn_summary (
+	device  text,
+	localAddr text,
+	localPort integer,
+	remAddr   text,
+	remPort   integer,
+  size    int,
+	start   int,
+	end     int
+)`
+
+const CREATE_PACKET_TABLE = `create table if not exists packet (
+	device  text,
+	localAddr text,
+	localPort integer,
+	remAddr   text,
+	remPort   integer,
+	size      integer,
+  time      integer
+)`
+
 func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 	os.Create("./puffin.db")
 	db, err := sql.Open("sqlite3", "./puffin.db")
@@ -82,6 +103,8 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		CREATE_TCP_CONN_TABLE,
 		CREATE_PROCCESS_CONN_TABLE,
 		CREATE_PID_PARENTS_TABLE,
+		CREATE_CONN_SUMMARY_TABLE,
+		CREATE_PACKET_TABLE,
 	}
 
 	for _, table := range tables {
@@ -134,6 +157,37 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	insert_conn_summary, err := db.Prepare("INSERT INTO conn_summary (device, localAddr, localPort, remAddr, remPort, size, start, end) values (?, ?, ?, ?, ?, ?, ?, ?)")
+
+	if err != nil {
+		return err
+	}
+
+	insert_packet, err := db.Prepare("INSERT INTO packet (device, localAddr, localPort, remAddr, remPort, size, time) values (?, ?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+
+	// add packet information to database
+	for device, conns := range store {
+		for _, connData := range conns {
+			_, err := insert_conn_summary.Exec(device, connData.LocalAddr.String(), connData.LocalPort, connData.RemAddr.String(), connData.RemPort, connData.Size, connData.From, connData.To)
+
+			if err != nil {
+				return err
+			}
+
+			for _, pkt := range connData.Packets {
+				_, err := insert_packet.Exec(device, connData.LocalAddr.String(), connData.LocalPort, connData.RemAddr.String(), connData.RemPort, pkt.Size, pkt.Timestamp)
+
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 	}
 
 	return nil

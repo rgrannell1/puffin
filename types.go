@@ -69,11 +69,16 @@ func (conn *PidSocket) Id() string {
 	return conn.Connection.Id()
 }
 
+// TODO add connid here
 type StoredConnectionData struct {
-	Size    int                // Information we accumulate over time for each connection
-	From    int                // The time the least recent was received,
-	To      int                // The time the most recent packet was received
-	Packets []StoredPacketData // Information about each packet received
+	LocalAddr net.IP
+	LocalPort uint64
+	RemAddr   net.IP
+	RemPort   uint64
+	Size      int                // Information we accumulate over time for each connection
+	From      int                // The time the least recent was received,
+	To        int                // The time the most recent packet was received
+	Packets   []StoredPacketData // Information about each packet received
 }
 
 type MachineNetworkStorage = map[string]map[string]StoredConnectionData
