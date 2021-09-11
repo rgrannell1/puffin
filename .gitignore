@@ -2,3 +2,7 @@ porcus
 .vscode/settings.json
 puffin
 out.json
+build.zsh
+*.ipynb
+*.json
+*.csv

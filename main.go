@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/user"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -97,6 +98,22 @@ func PidToCommand(pfs *procfs.FS, pid int) string {
 	return comm
 }
 
+func PidToCommandline(pfs *procfs.FS, pid int) string {
+	pidFs, err := pfs.Proc(pid)
+
+	if err != nil {
+		return "?"
+	}
+
+	comm, err := pidFs.CmdLine()
+
+	if err != nil {
+		return "?"
+	}
+
+	return strings.Join(comm, " ")
+}
+
 // Given a pid, recursively find its parents
 func PidParents(pid int, parents map[int]int) []int {
 	pids := []int{}
@@ -144,6 +161,7 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 				sock := PidSocket{
 					uidToUsername[conn.UID],
 					PidToCommand(pfs, pid),
+					PidToCommandline(pfs, pid),
 					pid,
 					PidParents(pid, pidParents),
 					conn,

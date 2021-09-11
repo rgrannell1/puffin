@@ -29,12 +29,13 @@ func (conn *TCPConnection) Id() string {
 // Represents an association between process-based information (user, command, pid), and a
 // transport-layer connection
 type PidSocket struct {
-	UserName   string        `json:"username"`
-	Command    string        `json:"command"`
-	Pid        int           `json:"pid"`
-	PidParents []int         `json:"parent_pids"`
-	Connection TCPConnection `json:"connection"`
-	Time       time.Time     `json:"time"`
+	UserName    string        `json:"username"`
+	Command     string        `json:"command"`
+	CommandLine string        `json:"command_line"`
+	Pid         int           `json:"pid"`
+	PidParents  []int         `json:"parent_pids"`
+	Connection  TCPConnection `json:"connection"`
+	Time        time.Time     `json:"time"`
 }
 
 // Information to extract from each packet, where possible.
@@ -69,10 +70,10 @@ func (conn *PidSocket) Id() string {
 }
 
 type StoredConnectionData struct {
-	Size    int
-	From    int
-	To      int
-	Packets []StoredPacketData
+	Size    int                // Information we accumulate over time for each connection
+	From    int                // The time the least recent was received,
+	To      int                // The time the most recent packet was received
+	Packets []StoredPacketData // Information about each packet received
 }
 
 type MachineNetworkStorage = map[string]map[string]StoredConnectionData
