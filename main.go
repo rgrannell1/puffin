@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/procfs"
 )
 
+// Give a file-path, get the corresponding inode
 func GetInode(fpath *string) uint64 {
 	// it's really odd I need a direct syscall to get an inode...
 	// this will fail horribly on windows
@@ -29,8 +30,9 @@ func GetInode(fpath *string) uint64 {
 
 const CLEAR_STRING = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
 
-func LookupUsername(id uint64) (string, error) {
-	userData, err := user.LookupId(fmt.Sprint(id))
+// Given a UID, look up the corresponding username
+func LookupUsername(uid uint64) (string, error) {
+	userData, err := user.LookupId(fmt.Sprint(uid))
 
 	if err != nil {
 		return "", err
@@ -218,7 +220,13 @@ func Puffin(json bool, seconds int) int {
 
 		if json && time.Since(start) > time.Second*time.Duration(seconds) {
 			storeLock.Lock()
-			ReportNetwork(&pidConns, store)
+			err := ReportNetwork(&pidConns, store, false) // TODO
+
+			if err != nil {
+				log.Fatal(err)
+				return 1
+			}
+
 			storeLock.Unlock()
 			return 0
 		}
@@ -228,15 +236,48 @@ func Puffin(json bool, seconds int) int {
 func main() {
 	usage := `
 Usage:
-  puffin [-j|--json] [-s <seconds|--seconds <seconds>]
-	puffin [-h|--help]
+  puffin
+  puffin capture [(-j|--json)|(-d|--db)] [-s <seconds|--seconds <seconds>]
+	puffin analyse <db> [-q <str>|--query <str>] [-f <fpath>|--file <fpath>]
+	puffin (-h|--help)
 
 Description:
-  Monitor machine network-traffic.
+  Process-aware network-tracing & analysis. Like nethogs, puffin allows you to break down traffic per process. Unlike nethogs, puffin
+	can be run in interactive and non-interactive mode, and outputs detailed network information as JSON or an SQLite database for
+	detailed analysis.
+
+Modes:
+  capture: Capture network traffic and identify processes, connections, protocols, devices, and packets with ongoing networking
+	analyse: Analyse a puffin trace using SQL to identify top-talkers, total network-traffic, processes using the network, total-connections, or
+	             anything else helpful.
+
+Protocols:
+  Puffin currently supports the following protocols:
+
+	* IPv4
+	* IPv6
+	* UDP
+	* TCP
 
 Options:
-  -j, --json                           output as JSON.
+	-i, --interactive                    start in interactive mode.
+  -j, --json                           output aggregated connection-information JSON.
+	-d, --db                             output aggregated connection-information to a SQLITE database.
 	-s <seconds>, --seconds <seconds>    how mnay seconds should it run for?
+
+See Also:
+  nethogs, ss, lsof -i
+
+License:
+  The MIT License
+
+  Copyright (c) 2021 Róisín Grannell
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	`
 
 	opts, _ := docopt.ParseDoc(usage)

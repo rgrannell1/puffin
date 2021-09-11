@@ -6,3 +6,4 @@ build.zsh
 *.ipynb
 *.json
 *.csv
+*.db
