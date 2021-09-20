@@ -6,36 +6,27 @@ import (
 	"time"
 )
 
-// Represents a TCP Connection, based on Procfs's export
-type TCPConnection struct {
-	SL        uint64 `json:"sl"`
-	LocalAddr net.IP `json:"localaddr"`
-	LocalPort uint64 `json:"localport"`
-	RemAddr   net.IP `json:"remaddr"`
-	RemPort   uint64 `json:"remport"`
-	St        uint64 `json:"st"`
-	TxQueue   uint64 `json:"txqueue"`
-	RxQueue   uint64 `json:"rxqueue"`
-	UID       uint64 `json:"uid"`
-	Inode     uint64 `json:"inode"`
-}
-
-// base the socket-id on the 4-tuple (localip, localport, remip, remport)
-// lets assume IPs will always have the same representation for now
-func (conn *TCPConnection) Id() string {
-	return conn.LocalAddr.String() + fmt.Sprint(conn.LocalPort) + conn.RemAddr.String() + fmt.Sprint(conn.RemPort)
+type Connection interface {
+	LocalAddr() net.IP
+	LocalPort() uint64
+	RemAddr() net.IP
+	RemPort() uint64
+	UID() uint64
+	Inode() uint64
+	Id() string
+	GetType() string
 }
 
 // Represents an association between process-based information (user, command, pid), and a
 // transport-layer connection
 type PidSocket struct {
-	UserName    string        `json:"username"`
-	Command     string        `json:"command"`
-	CommandLine string        `json:"command_line"`
-	Pid         int           `json:"pid"`
-	PidParents  []int         `json:"parent_pids"`
-	Connection  TCPConnection `json:"connection"`
-	Time        time.Time     `json:"time"`
+	UserName    string     `json:"username"`
+	Command     string     `json:"command"`
+	CommandLine string     `json:"command_line"`
+	Pid         int        `json:"pid"`
+	PidParents  []int      `json:"parent_pids"`
+	Connection  Connection `json:"connection"`
+	Time        time.Time  `json:"time"`
 }
 
 // Information to extract from each packet, where possible.

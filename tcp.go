@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"time"
 
@@ -37,7 +39,7 @@ func ProcHash(v6 bool) (string, error) {
 
 // Watch /proc/net/tcp and /proc/net/tcp6 for changes by emitting a file-change
 // periodically
-func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
+func NetTCPWatcher(tcpChan chan []Connection, pfs *procfs.FS) {
 	hashv4 := ""
 	hashv6 := ""
 
@@ -45,14 +47,14 @@ func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
 		changed := false
 		currHashv4, _ := ProcHash(false)
 
-		mconns := make([]TCPConnection, 0)
+		mconns := make([]Connection, 0)
 
 		if hashv4 != currHashv4 {
 			changed = true
 			hashv4 = currHashv4
 
 			conns, _ := pfs.NetTCP()
-			mconns = make([]TCPConnection, len(conns))
+			mconns = make([]Connection, len(conns))
 
 			for idx, conn := range conns {
 				tcpConn := TCPConnection{conn.Sl, conn.LocalAddr, conn.LocalPort, conn.RemAddr, conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode}
@@ -81,4 +83,68 @@ func NetTCPWatcher(tcpChan chan []TCPConnection, pfs *procfs.FS) {
 
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+// Represents a TCP Connection, based on Procfs's export
+type TCPConnection struct {
+	sl        uint64 `json:"sl"`
+	localAddr net.IP `json:"localaddr"`
+	localPort uint64 `json:"localport"`
+	remAddr   net.IP `json:"remaddr"`
+	remPort   uint64 `json:"remport"`
+	st        uint64 `json:"st"`
+	txQueue   uint64 `json:"txqueue"`
+	rxQueue   uint64 `json:"rxqueue"`
+	uid       uint64 `json:"uid"`
+	inode     uint64 `json:"inode"`
+}
+
+func (tcp TCPConnection) SL() uint64 {
+	return tcp.sl
+}
+
+func (tcp TCPConnection) ST() uint64 {
+	return tcp.st
+}
+
+func (tcp TCPConnection) TxQueue() uint64 {
+	return tcp.txQueue
+}
+
+func (tcp TCPConnection) RxQueue() uint64 {
+	return tcp.rxQueue
+}
+
+func (tcp TCPConnection) GetType() string {
+	return "TCP"
+}
+
+func (tcp TCPConnection) LocalAddr() net.IP {
+	return tcp.localAddr
+}
+
+func (tcp TCPConnection) LocalPort() uint64 {
+	return tcp.localPort
+}
+
+func (tcp TCPConnection) RemAddr() net.IP {
+	return tcp.RemAddr()
+}
+
+func (tcp TCPConnection) RemPort() uint64 {
+	return tcp.remPort
+}
+
+func (tcp TCPConnection) UID() uint64 {
+	return tcp.uid
+}
+
+func (tcp TCPConnection) Inode() uint64 {
+	return tcp.inode
+}
+
+// base the socket-id on the 4-tuple (localip, localport, remip, remport)
+// lets assume IPs will always have the same representation for now
+func (conn TCPConnection) Id() string {
+	return conn.LocalAddr().String() + fmt.Sprint(conn.LocalPort()) + conn.RemAddr().String() + fmt.Sprint(conn.RemPort())
 }

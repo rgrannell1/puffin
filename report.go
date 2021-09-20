@@ -51,6 +51,17 @@ const CREATE_TCP_CONN_TABLE = `create table if not exists tcp_conn (
 	inode     integer
 )`
 
+const CREATE_UDP_CONN_TABLE = `create table if not exists udp_conn (
+	sl        integer,
+	localAddr text,
+	remAddr   text,
+	st        integer,
+	txQueue   integer,
+	rxQueue   integer,
+	uid       integer,
+	inode     integer
+)`
+
 const CREATE_PROCCESS_CONN_TABLE = `create table if not exists process_conn (
   username       text,
 	command        text,
@@ -101,6 +112,7 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 
 	tables := []string{
 		CREATE_TCP_CONN_TABLE,
+		CREATE_UDP_CONN_TABLE,
 		CREATE_PROCCESS_CONN_TABLE,
 		CREATE_PID_PARENTS_TABLE,
 		CREATE_CONN_SUMMARY_TABLE,
@@ -132,6 +144,12 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		return err
 	}
 
+	insert_udp_conn, err := db.Prepare("INSERT INTO udp_conn (sl, localAddr, remAddr, st, txQueue, rxQueue, uid, inode) values (?, ?, ?, ?, ?, ?, ?, ?)")
+
+	if err != nil {
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
@@ -146,16 +164,53 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		}
 
 		// insert process connections
-		_, err = insert_process_conn.Exec(pidConn.UserName, pidConn.Command, pidConn.CommandLine, pidConn.Pid, pidConn.Connection.Inode, pidConn.Time.UnixNano())
+		_, err = insert_process_conn.Exec(pidConn.UserName, pidConn.Command, pidConn.CommandLine, pidConn.Pid, pidConn.Connection.Inode(), pidConn.Time.UnixNano())
 		if err != nil {
 			return err
 		}
 
+		// TODO if tcp, use switch to handle insert
+
 		// insert tcp connection data
 		conn := pidConn.Connection
-		_, err = insert_tcp_conn.Exec(conn.SL, conn.LocalAddr.String(), conn.LocalPort, conn.RemAddr.String(), conn.RemPort, conn.St, conn.TxQueue, conn.RxQueue, conn.UID, conn.Inode)
-		if err != nil {
-			return err
+
+		switch conn.GetType() {
+		case "TCP":
+			conn := conn.(TCPConnection)
+
+			// insert into TCP table
+			_, err = insert_tcp_conn.Exec(
+				conn.SL(),
+				conn.LocalAddr().String(),
+				conn.LocalPort(),
+				conn.RemAddr().String(),
+				conn.RemPort(),
+				conn.ST(),
+				conn.TxQueue(),
+				conn.RxQueue(),
+				conn.UID(),
+				conn.Inode())
+
+			if err != nil {
+				return err
+			}
+		case "UDP":
+			conn := conn.(UDPConnection)
+
+			// insert into TCP table
+			_, err = insert_udp_conn.Exec(
+				conn.SL(),
+				conn.LocalAddr().String(),
+				conn.RemAddr().String(),
+				conn.ST(),
+				conn.TxQueue(),
+				conn.RxQueue(),
+				conn.UID(),
+				conn.Inode())
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 

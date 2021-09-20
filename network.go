@@ -23,12 +23,20 @@ func ListNetworkDevices(pfs *procfs.FS) ([]string, error) {
 // Watch network traffic and /proc information about network-devices
 // and connections.
 func NetworkWatcher(pfs *procfs.FS, packetChan chan *PacketData, pidConnChan chan *[]PidSocket) {
-	tcpChan := make(chan []TCPConnection)
+	tcpChan := make(chan []Connection)
+	udpChan := make(chan []Connection)
 
 	go NetTCPWatcher(tcpChan, pfs)
+	go NetUDPWatcher(udpChan, pfs)
 	go PacketWatcher(packetChan, pfs)
 
 	for {
-		pidConnChan <- AssociateProcesses(pfs, <-tcpChan)
+		select {
+		case tcp := <-tcpChan:
+
+			pidConnChan <- AssociateProcesses(pfs, tcp)
+		case udp := <-udpChan:
+			pidConnChan <- AssociateProcesses(pfs, udp)
+		}
 	}
 }

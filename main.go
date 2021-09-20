@@ -134,7 +134,7 @@ func PidParents(pid int, parents map[int]int) []int {
 	}
 }
 
-func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
+func AssociateProcesses(pfs *procfs.FS, conns []Connection) *[]PidSocket {
 	// get all pids from /proc/
 	pidsForInode, pidParents, _ := ListPids(pfs)
 
@@ -144,24 +144,26 @@ func AssociateProcesses(pfs *procfs.FS, conns []TCPConnection) *[]PidSocket {
 
 	// associate each pid to a socket where possible
 	for _, conn := range conns {
-		if pids, ok := pidsForInode[conn.Inode]; ok {
+		conn := conn.(Connection)
+
+		if pids, ok := pidsForInode[conn.Inode()]; ok {
 			for _, pid := range pids {
 				dt := time.Now()
 
 				// associate uids to user-names, with a fallback value when this fails
-				_, ok := uidToUsername[conn.UID]
+				_, ok := uidToUsername[conn.UID()]
 
 				if !ok {
-					userName, _ := LookupUsername(conn.UID)
+					userName, _ := LookupUsername(conn.UID())
 					if len(userName) == 0 {
-						uidToUsername[conn.UID] = "?"
+						uidToUsername[conn.UID()] = "?"
 					} else {
-						uidToUsername[conn.UID] = userName
+						uidToUsername[conn.UID()] = userName
 					}
 				}
 
 				sock := PidSocket{
-					uidToUsername[conn.UID],
+					uidToUsername[conn.UID()],
 					PidToCommand(pfs, pid),
 					PidToCommandline(pfs, pid),
 					pid,
@@ -195,7 +197,6 @@ func Puffin(json bool, seconds int) int {
 	packets := []PacketData{}
 
 	go NetworkWatcher(&pfs, packetChan, pidConnChan)
-
 	var storeLock sync.Mutex
 
 	store := map[string]map[string]StoredConnectionData{}
