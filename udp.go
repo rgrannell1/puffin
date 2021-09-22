@@ -66,23 +66,23 @@ type UDPConnection struct {
 	inode     uint64 `json:"inode"`
 }
 
-func (conn UDPConnection) Id() string {
-	return conn.LocalAddr().String() + fmt.Sprint(conn.LocalPort()) + conn.RemAddr().String() + fmt.Sprint(conn.RemPort())
+func (conn UDPConnection) GetId() string {
+	return conn.GetLocalAddr().String() + fmt.Sprint(conn.GetLocalPort()) + conn.GetRemAddr().String() + fmt.Sprint(conn.GetRemPort())
 }
 
-func (udp UDPConnection) SL() uint64 {
+func (udp UDPConnection) GetSL() uint64 {
 	return udp.sl
 }
 
-func (udp UDPConnection) ST() uint64 {
+func (udp UDPConnection) GetST() uint64 {
 	return udp.st
 }
 
-func (udp UDPConnection) TxQueue() uint64 {
+func (udp UDPConnection) GetTxQueue() uint64 {
 	return udp.txQueue
 }
 
-func (udp UDPConnection) RxQueue() uint64 {
+func (udp UDPConnection) GetRxQueue() uint64 {
 	return udp.rxQueue
 }
 
@@ -90,26 +90,26 @@ func (udp UDPConnection) GetType() string {
 	return "UDP"
 }
 
-func (udp UDPConnection) LocalAddr() net.IP {
+func (udp UDPConnection) GetLocalAddr() net.IP {
 	return udp.localAddr
 }
 
-func (udp UDPConnection) LocalPort() uint64 {
+func (udp UDPConnection) GetLocalPort() uint64 {
 	return 0
 }
 
-func (udp UDPConnection) RemAddr() net.IP {
+func (udp UDPConnection) GetRemAddr() net.IP {
 	return udp.remAddr
 }
 
-func (udp UDPConnection) RemPort() uint64 {
+func (udp UDPConnection) GetRemPort() uint64 {
 	return 0
 }
 
-func (udp UDPConnection) UID() uint64 {
+func (udp UDPConnection) GetUID() uint64 {
 	return udp.uid
 }
 
-func (udp UDPConnection) Inode() uint64 {
+func (udp UDPConnection) GetInode() uint64 {
 	return udp.inode
 }

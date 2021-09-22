@@ -99,19 +99,19 @@ type TCPConnection struct {
 	inode     uint64 `json:"inode"`
 }
 
-func (tcp TCPConnection) SL() uint64 {
+func (tcp TCPConnection) GetSL() uint64 {
 	return tcp.sl
 }
 
-func (tcp TCPConnection) ST() uint64 {
+func (tcp TCPConnection) GetST() uint64 {
 	return tcp.st
 }
 
-func (tcp TCPConnection) TxQueue() uint64 {
+func (tcp TCPConnection) GetTxQueue() uint64 {
 	return tcp.txQueue
 }
 
-func (tcp TCPConnection) RxQueue() uint64 {
+func (tcp TCPConnection) GetRxQueue() uint64 {
 	return tcp.rxQueue
 }
 
@@ -119,32 +119,32 @@ func (tcp TCPConnection) GetType() string {
 	return "TCP"
 }
 
-func (tcp TCPConnection) LocalAddr() net.IP {
+func (tcp TCPConnection) GetLocalAddr() net.IP {
 	return tcp.localAddr
 }
 
-func (tcp TCPConnection) LocalPort() uint64 {
+func (tcp TCPConnection) GetLocalPort() uint64 {
 	return tcp.localPort
 }
 
-func (tcp TCPConnection) RemAddr() net.IP {
-	return tcp.RemAddr()
+func (tcp TCPConnection) GetRemAddr() net.IP {
+	return tcp.remAddr
 }
 
-func (tcp TCPConnection) RemPort() uint64 {
+func (tcp TCPConnection) GetRemPort() uint64 {
 	return tcp.remPort
 }
 
-func (tcp TCPConnection) UID() uint64 {
+func (tcp TCPConnection) GetUID() uint64 {
 	return tcp.uid
 }
 
-func (tcp TCPConnection) Inode() uint64 {
+func (tcp TCPConnection) GetInode() uint64 {
 	return tcp.inode
 }
 
 // base the socket-id on the 4-tuple (localip, localport, remip, remport)
 // lets assume IPs will always have the same representation for now
-func (conn TCPConnection) Id() string {
-	return conn.LocalAddr().String() + fmt.Sprint(conn.LocalPort()) + conn.RemAddr().String() + fmt.Sprint(conn.RemPort())
+func (conn TCPConnection) GetId() string {
+	return conn.GetLocalAddr().String() + fmt.Sprint(conn.GetLocalPort()) + conn.GetRemAddr().String() + fmt.Sprint(conn.GetRemPort())
 }

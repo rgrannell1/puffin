@@ -69,7 +69,7 @@ func AssociatePacket(store MachineNetworkStorage, pidConns *[]PidSocket, pkt Pac
 		store[pkt.Device] = map[string]StoredConnectionData{}
 	}
 
-	id := pkt.Id()
+	id := pkt.GetId()
 	if tgt, hasConn := store[pkt.Device][id]; !hasConn {
 		// set the initial stored-data for this connection, with a single stored packet
 		packets := []StoredPacketData{}

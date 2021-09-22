@@ -13,7 +13,7 @@ func ReportJSONNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error
 	for device, deviceConns := range store {
 		for connId, connData := range deviceConns {
 			for _, pidData := range *pidConns {
-				if pidData.Id() == connId {
+				if pidData.GetId() == connId {
 					// add connection
 					data := OutputRow{
 						Device:        device,
@@ -98,6 +98,12 @@ const CREATE_PACKET_TABLE = `create table if not exists packet (
   time      integer
 )`
 
+const CREATE_USER_TABLE = `create table if not exists users (
+	uid      integer
+	username text
+)
+`
+
 func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 	os.Create("./puffin.db")
 	db, err := sql.Open("sqlite3", "./puffin.db")
@@ -117,6 +123,7 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		CREATE_PID_PARENTS_TABLE,
 		CREATE_CONN_SUMMARY_TABLE,
 		CREATE_PACKET_TABLE,
+		CREATE_USER_TABLE,
 	}
 
 	for _, table := range tables {
@@ -164,7 +171,7 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 		}
 
 		// insert process connections
-		_, err = insert_process_conn.Exec(pidConn.UserName, pidConn.Command, pidConn.CommandLine, pidConn.Pid, pidConn.Connection.Inode(), pidConn.Time.UnixNano())
+		_, err = insert_process_conn.Exec(pidConn.UserName, pidConn.Command, pidConn.CommandLine, pidConn.Pid, pidConn.Connection.GetInode(), pidConn.Time.UnixNano())
 		if err != nil {
 			return err
 		}
@@ -180,16 +187,16 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 
 			// insert into TCP table
 			_, err = insert_tcp_conn.Exec(
-				conn.SL(),
-				conn.LocalAddr().String(),
-				conn.LocalPort(),
-				conn.RemAddr().String(),
-				conn.RemPort(),
-				conn.ST(),
-				conn.TxQueue(),
-				conn.RxQueue(),
-				conn.UID(),
-				conn.Inode())
+				conn.GetSL(),
+				conn.GetLocalAddr().String(),
+				conn.GetLocalPort(),
+				conn.GetRemAddr().String(),
+				conn.GetRemPort(),
+				conn.GetST(),
+				conn.GetTxQueue(),
+				conn.GetRxQueue(),
+				conn.GetUID(),
+				conn.GetInode())
 
 			if err != nil {
 				return err
@@ -199,14 +206,14 @@ func ReportDBNetwork(pidConns *[]PidSocket, store MachineNetworkStorage) error {
 
 			// insert into TCP table
 			_, err = insert_udp_conn.Exec(
-				conn.SL(),
-				conn.LocalAddr().String(),
-				conn.RemAddr().String(),
-				conn.ST(),
-				conn.TxQueue(),
-				conn.RxQueue(),
-				conn.UID(),
-				conn.Inode())
+				conn.GetSL(),
+				conn.GetLocalAddr().String(),
+				conn.GetRemAddr().String(),
+				conn.GetST(),
+				conn.GetTxQueue(),
+				conn.GetRxQueue(),
+				conn.GetUID(),
+				conn.GetInode())
 
 			if err != nil {
 				return err

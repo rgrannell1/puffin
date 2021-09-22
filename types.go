@@ -7,13 +7,13 @@ import (
 )
 
 type Connection interface {
-	LocalAddr() net.IP
-	LocalPort() uint64
-	RemAddr() net.IP
-	RemPort() uint64
-	UID() uint64
-	Inode() uint64
-	Id() string
+	GetLocalAddr() net.IP
+	GetLocalPort() uint64
+	GetRemAddr() net.IP
+	GetRemPort() uint64
+	GetUID() uint64
+	GetInode() uint64
+	GetId() string
 	GetType() string
 }
 
@@ -52,12 +52,12 @@ type StoredPacketData struct {
 }
 
 // Given extracted packet-information, return a connection ID
-func (pkt *PacketData) Id() string {
+func (pkt *PacketData) GetId() string {
 	return pkt.LocalAddr.String() + fmt.Sprint(pkt.LocalPort) + pkt.RemAddr.String() + fmt.Sprint(pkt.RemPort)
 }
 
-func (conn *PidSocket) Id() string {
-	return conn.Connection.Id()
+func (conn *PidSocket) GetId() string {
+	return conn.Connection.GetId()
 }
 
 // TODO add connid here
